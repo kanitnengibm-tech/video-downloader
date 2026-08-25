@@ -1,82 +1,20 @@
-<!DOCTYPE html>
-<html lang="km">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Video Downloader</title>
-    <!-- ប្រើប្រាស់ Tailwind CSS សម្រាប់រចនាផ្ទៃ Interface -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
-
-    <div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-700 text-center">
-        <h1 class="text-2xl font-bold mb-2">Video Downloader</h1>
-        <p class="text-gray-400 text-sm mb-6">TikTok, Douyin, Facebook, Instagram</p>
-
-        <div class="space-y-4">
-            <input type="text" id="videoUrl" placeholder="បិទភ្ជាប់តំណ (Paste Link) នៅទីនេះ..." 
-                   class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500">
-            
-            <button onclick="fetchVideo()" id="btn" 
-                    class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold transition">
-                ទាញយក (Download)
-            </button>
-        </div>
-
-        <!-- ផ្ទាំងបង្ហាញលទ្ធផលក្រោយពេលទាញយកទិន្នន័យបាន -->
-        <div id="result" class="mt-6 hidden text-left bg-gray-700 p-4 rounded-lg">
-            <img id="thumb" class="w-full rounded mb-3 hidden" src="" alt="Thumbnail">
-            <p id="title" class="text-sm font-medium mb-3 truncate"></p>
-            <a id="downloadLink" href="#" target="_blank" 
-               class="block text-center bg-green-600 hover:bg-green-700 py-2 rounded font-semibold transition">
-                ចុចទាញយកវីដេអូ
-            </a>
-        </div>
-    </div>
-
-    <script>
-        async function fetchVideo() {
-            const url = document.getElementById('videoUrl').value;
-            const btn = document.getElementById('btn');
-            const result = document.getElementById('result');
-            
-            if (!url) {
-                alert("សូមបញ្ចូល Link ជាមុនសិន!");
-                return;
-            }
-
-            btn.innerText = "កំពុងដំណើរការ...";
-            btn.disabled = true;
-
-            try {
-                // ប្រើ Relative URL /api/extract ដើម្បីឱ្យដំណើរការបានទាំងលើទូរស័ព្ទ និង Cloud
-                const res = await fetch("/api/extract", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ url: url })
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    document.getElementById('title').innerText = data.title;
-                    if (data.thumbnail) {
-                        const thumb = document.getElementById('thumb');
-                        thumb.src = data.thumbnail;
-                        thumb.classList.remove('hidden');
-                    }
-                    document.getElementById('downloadLink').href = data.download_url;
-                    result.classList.remove('hidden');
-                } else {
-                    alert("បរាជ័យ៖ មិនអាចទាញយក Link នេះបានទេ! " + (data.detail || ""));
-                }
-            } catch (err) {
-                alert("មានបញ្ហាក្នុងការទាញយក! សូមព្យាយាមម្តងទៀត។");
+const blobUrl = window.URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = "video.mp4";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (e) {
+                // Fallback បើកលោតដោនឡូតធម្មតា
+                window.location.href = currentDownloadUrl;
             } finally {
-                btn.innerText = "ទាញយក (Download)";
-                btn.disabled = false;
+                this.innerText = "ចុចទាញយកវីដេអូចូលទូរស័ព្ទ";
+                this.disabled = false;
             }
-        }
+        };
     </script>
 </body>
 </html>
