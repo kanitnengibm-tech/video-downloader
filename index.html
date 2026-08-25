@@ -1,20 +1,82 @@
-const blobUrl = window.URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = "video.mp4";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(blobUrl);
-            } catch (e) {
-                // Fallback បើកលោតដោនឡូតធម្មតា
-                window.location.href = currentDownloadUrl;
-            } finally {
-                this.innerText = "ចុចទាញយកវីដេអូចូលទូរស័ព្ទ";
-                this.disabled = false;
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Video Downloader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-700 text-center">
+        <h1 class="text-2xl font-bold mb-2">Video Downloader</h1>
+        <p class="text-gray-400 text-sm mb-6">TikTok, Douyin, Facebook, Instagram</p>
+
+        <div class="space-y-4">
+            <input type="text" id="videoUrl" placeholder="បិទភ្ជាប់តំណ (Paste Link) នៅទីនេះ..." 
+                   class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500">
+            
+            <button onclick="processVideo()" id="btn" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold transition">
+                ទាញយក (Download)
+            </button>
+        </div>
+
+        <div id="result" class="mt-6 hidden text-left bg-gray-700 p-4 rounded-lg">
+            <img id="thumb" class="w-full rounded mb-3 hidden" src="" alt="Thumbnail">
+            <p id="title" class="text-sm font-medium mb-3 truncate"></p>
+            <a id="downloadLink" href="#" 
+               class="block text-center bg-green-600 hover:bg-green-700 py-3 rounded-lg font-semibold transition shadow-lg">
+                ⬇️ ចុច Save វីដេអូចូលទូរស័ព្ទ
+            </a>
+        </div>
+    </div>
+
+    <script>
+        async function processVideo() {
+            const url = document.getElementById('videoUrl').value;
+            const btn = document.getElementById('btn');
+            const result = document.getElementById('result');
+            
+            if (!url) {
+                alert("សូមបញ្ចូល Link ជាមុនសិន!");
+                return;
             }
-        };
+
+            btn.innerText = "កំពុងរៀបចំទាញយក (សូមរង់ចាំបន្តិច)...";
+            btn.disabled = true;
+            result.classList.add('hidden');
+
+            try {
+                const res = await fetch("/api/extract", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('title').innerText = data.title;
+                    if (data.thumbnail) {
+                        const thumb = document.getElementById('thumb');
+                        thumb.src = data.thumbnail;
+                        thumb.classList.remove('hidden');
+                    }
+                    
+                    const dlBtn = document.getElementById('downloadLink');
+                    dlBtn.href = /api/download/${data.file_id};
+                    result.classList.remove('hidden');
+                } else {
+                    alert("បរាជ័យ៖ " + (data.detail || "មិនអាចទាញយក Link នេះបានទេ"));
+                }
+            } catch (err) {
+                alert("មានបញ្ហាក្នុងការទាក់ទង Server!");
+            } finally {
+                btn.innerText = "ទាញយក (Download)";
+                btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
