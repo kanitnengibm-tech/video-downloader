@@ -27,8 +27,8 @@ def read_root():
 @app.post("/api/extract")
 def extract_video(data: VideoRequest):
     try:
-        # ប្រើប្រាស់ Cobalt API ស៊េរីថ្មីសម្រាប់គ្រប់ Platform (TikTok, FB, IG, YT...)
-        api_url = "https://api.cobalt.tools/api/json"
+        # ប្តូរមកប្រើ Cobalt API ជំនាន់ចុងក្រោយ (v10) ផ្លូវការ
+        api_url = "https://api.cobalt.tools"
         payload = {
             "url": data.url,
             "vQuality": "max"
@@ -51,7 +51,6 @@ def extract_video(data: VideoRequest):
                 "download_url": res_data.get("url")
             }
         elif status == "picker":
-            # ករណីមានหลายไฟล์ យកอันแรก
             items = res_data.get("picker", [])
             if items:
                 return {
@@ -60,7 +59,7 @@ def extract_video(data: VideoRequest):
                     "download_url": items[0].get("url")
                 }
         
-        raise Exception(res_data.get("text", "មិនអាចទាញយក Link นี้ได้ទេ"))
+        raise Exception(res_data.get("text", "មិនអាចទាញយក Link នេះបានទេ"))
             
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
