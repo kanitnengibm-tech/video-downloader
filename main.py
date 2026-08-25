@@ -1,10 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 import yt_dlp
-import requests
 import os
+import uuid
 
 app = FastAPI()
 
@@ -15,8 +15,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+DOWNLOAD_FOLDER = "downloads"
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
+
 class VideoRequest(BaseModel):
     url: str
+
+def remove_file(path: str):
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -27,46 +37,51 @@ def read_root():
 
 @app.post("/api/extract")
 def extract_video(data: VideoRequest):
+    file_id = str(uuid.uuid4())
+    output_template = os.path.join(DOWNLOAD_FOLDER, f"{file_id}.%(ext)s")
+    
     ydl_opts = {
-        'format': 'best',
+        'format': 'best[ext=mp4]/best',
+        'outtmpl': output_template,
         'quiet': True,
         'no_warnings': True,
     }
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(data.url, download=False)
-            video_url = info.get('url')
-            if not video_url and 'entries' in info:
-                video_url = info['entries'][0].get('url')
+            info = ydl.extract_info(data.url, download=True)
+            title = info.get('title', 'video')
+            thumbnail = info.get('thumbnail')
             
-            # បង្កើត Link ទាញយកតាមរយៈ Proxy របស់ Server យើងផ្ទាល់
-            proxy_download_url = f"/api/download?url={requests.utils.quote(video_url)}"
+            # រកមើល file ដែលទើប download បាន
+            filename = None
+            for file in os.listdir(DOWNLOAD_FOLDER):
+                if file.startswith(file_id):
+                    filename = file
+                    break
             
+            if not filename:
+                raise Exception("មិនអាចបង្កើត File វីដេអូបានទេ")
+                
             return {
-                "title": info.get('title', 'Video'),
-                "thumbnail": info.get('thumbnail'),
-                "download_url": proxy_download_url
+                "title": title,
+                "thumbnail": thumbnail,
+                "file_id": filename
             }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# API ជំនួយបញ្ជូន Video Stream ដើម្បីកុំឱ្យជាប់ Error 403
-@app.get("/api/download")
-def download_stream(url: str):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.tiktok.com/'
-    }
+@app.get("/api/download/{filename}")
+def download_file(filename: str, background_tasks: BackgroundTasks):
+    file_path = os.path.join(DOWNLOAD_FOLDER, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    # លុប file ចេញពី server ក្រោយពេល user download រួច
+    background_tasks.add_task(remove_file, file_path)
     
-    def iterfile():
-        with requests.get(url, headers=headers, stream=True) as r:
-            r.raise_for_status()
-            for chunk in r.iter_content(chunk_size=8192):
-                yield chunk
-
-    return StreamingResponse(
-        iterfile(),
-        media_type="video/mp4",
-        headers={"Content-Disposition": 'attachment; filename="video.mp4"'}
+    return FileResponse(
+        path=file_path, 
+        media_type="video/mp4", 
+        filename="video.mp4"
     )
