@@ -27,27 +27,40 @@ def read_root():
 @app.post("/api/extract")
 def extract_video(data: VideoRequest):
     try:
-        # ប្រើប្រាស់ TikWM API សម្រាប់ទាញយកវីដេអូ TikTok យ៉ាងរលូន
-        api_url = f"https://www.tikwm.com/api/?url={data.url}"
-        response = requests.get(api_url)
+        # ប្រើប្រាស់ Cobalt API ស៊េរីថ្មីសម្រាប់គ្រប់ Platform (TikTok, FB, IG, YT...)
+        api_url = "https://api.cobalt.tools/api/json"
+        payload = {
+            "url": data.url,
+            "vQuality": "max"
+        }
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+        
+        response = requests.post(api_url, json=payload, headers=headers)
         res_data = response.json()
         
-        if res_data.get("code") == 0:
-            video_info = res_data.get("data", {})
-            # เอาลิงก์ดาวน์โหลดแบบ HD หรือแบบธรรมดา
-            download_url = video_info.get("hdplay") or video_info.get("play")
-            title = video_info.get("title", "TikTok Video")
-            
-            if not download_url:
-                raise Exception("រកមិនឃើញ Link សម្រាប់ Download ទេ")
-                
+        status = res_data.get("status")
+        
+        if status in ["redirect", "stream"]:
             return {
-                "title": title,
-                "thumbnail": video_info.get("cover", ""),
-                "download_url": download_url
+                "title": "Downloaded Video",
+                "thumbnail": "",
+                "download_url": res_data.get("url")
             }
-        else:
-            raise Exception("Link នេះមិនត្រឹមត្រូវ ឬមិនអាចទាញយកបានទេ")
+        elif status == "picker":
+            # ករណីមានหลายไฟล์ យកอันแรก
+            items = res_data.get("picker", [])
+            if items:
+                return {
+                    "title": "Downloaded Video",
+                    "thumbnail": "",
+                    "download_url": items[0].get("url")
+                }
+        
+        raise Exception(res_data.get("text", "មិនអាចទាញយក Link นี้ได้ទេ"))
             
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
