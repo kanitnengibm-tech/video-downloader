@@ -40,32 +40,38 @@ def extract_video(data: VideoRequest):
     file_id = str(uuid.uuid4())
     output_template = os.path.join(DOWNLOAD_FOLDER, f"{file_id}.%(ext)s")
     
+    # កំណត់ Headers ដើម្បីកុំឱ្យ TikTok បិទស្ទាក់
     ydl_opts = {
-        'format': 'best[ext=mp4]/best',
+        'format': 'best',
         'outtmpl': output_template,
         'quiet': True,
         'no_warnings': True,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
     }
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(data.url, download=True)
-            title = info.get('title', 'video')
+            title = info.get('title', 'Video')
             thumbnail = info.get('thumbnail')
             
-            filename = None
+            # ស្វែងរកហ្វាលដែលទើបទាញយកបាន
+            found_file = None
             for file in os.listdir(DOWNLOAD_FOLDER):
                 if file.startswith(file_id):
-                    filename = file
+                    found_file = file
                     break
             
-            if not filename:
-                raise Exception("ไม่สามารถสร้างไฟล์วิดีโอได้")
+            if not found_file:
+                raise Exception("មិនអាចបង្កើត File វីដេអូបានទេ")
                 
             return {
                 "title": title,
                 "thumbnail": thumbnail,
-                "file_id": filename
+                "file_id": found_file
             }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -80,6 +86,6 @@ def download_file(filename: str, background_tasks: BackgroundTasks):
     
     return FileResponse(
         path=file_path, 
-        media_type="video/mp4", 
+        media_type="application/octet-stream", 
         filename="video.mp4"
     )
