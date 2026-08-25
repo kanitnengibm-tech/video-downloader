@@ -1,10 +1,9 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-import yt_dlp
+import requests
 import os
-import uuid
 
 app = FastAPI()
 
@@ -15,18 +14,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DOWNLOAD_FOLDER = "downloads"
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
-
 class VideoRequest(BaseModel):
     url: str
-
-def remove_file(path: str):
-    try:
-        if os.path.exists(path):
-            os.remove(path)
-    except Exception:
-        pass
 
 @app.get("/", response_class=HTMLResponse)
 def read_root():
@@ -37,55 +26,38 @@ def read_root():
 
 @app.post("/api/extract")
 def extract_video(data: VideoRequest):
-    file_id = str(uuid.uuid4())
-    output_template = os.path.join(DOWNLOAD_FOLDER, f"{file_id}.%(ext)s")
-    
-    # កំណត់ Headers ដើម្បីកុំឱ្យ TikTok បិទស្ទាក់
-    ydl_opts = {
-        'format': 'best',
-        'outtmpl': output_template,
-        'quiet': True,
-        'no_warnings': True,
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-        }
-    }
-    
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(data.url, download=True)
-            title = info.get('title', 'Video')
-            thumbnail = info.get('thumbnail')
-            
-            # ស្វែងរកហ្វាលដែលទើបទាញយកបាន
-            found_file = None
-            for file in os.listdir(DOWNLOAD_FOLDER):
-                if file.startswith(file_id):
-                    found_file = file
-                    break
-            
-            if not found_file:
-                raise Exception("មិនអាចបង្កើត File វីដេអូបានទេ")
-                
+        # ប្រើប្រាស់ Cobalt API (Tool ទាញយកវីដេអូឥតគិតថ្លៃ និងលឿនបំផុត)
+        api_url = "https://co.wuk.sh/api/json"
+        payload = {
+            "url": data.url,
+            "vQuality": "max"
+        }
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.post(api_url, json=payload, headers=headers)
+        res_data = response.json()
+        
+        if res_data.get("status") == "redirect" or res_data.get("status") == "stream":
+            download_url = res_data.get("url")
             return {
-                "title": title,
-                "thumbnail": thumbnail,
-                "file_id": found_file
+                "title": "Downloaded Video",
+                "thumbnail": "",
+                "download_url": download_url
             }
+        elif res_data.get("status") == "picker":
+            # ករណីมีหลายไฟล์ (เช่น รูปภาพหลายรูป) យកอันដំបូង
+            download_url = res_data.get("picker")[0].get("url")
+            return {
+                "title": "Downloaded Video",
+                "thumbnail": "",
+                "download_url": download_url
+            }
+        else:
+            raise Exception(res_data.get("text", "មិនអាចទាញយក Link ນີ້បានទេ"))
+            
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-@app.get("/api/download/{filename}")
-def download_file(filename: str, background_tasks: BackgroundTasks):
-    file_path = os.path.join(DOWNLOAD_FOLDER, filename)
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found")
-        
-    background_tasks.add_task(remove_file, file_path)
-    
-    return FileResponse(
-        path=file_path, 
-        media_type="application/octet-stream", 
-        filename="video.mp4"
-    )
