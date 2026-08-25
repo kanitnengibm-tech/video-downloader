@@ -53,7 +53,6 @@ def extract_video(data: VideoRequest):
             title = info.get('title', 'video')
             thumbnail = info.get('thumbnail')
             
-            # រកមើល file ដែលទើប download បាន
             filename = None
             for file in os.listdir(DOWNLOAD_FOLDER):
                 if file.startswith(file_id):
@@ -61,7 +60,7 @@ def extract_video(data: VideoRequest):
                     break
             
             if not filename:
-                raise Exception("មិនអាចបង្កើត File វីដេអូបានទេ")
+                raise Exception("ไม่สามารถสร้างไฟล์วิดีโอได้")
                 
             return {
                 "title": title,
@@ -77,7 +76,6 @@ def download_file(filename: str, background_tasks: BackgroundTasks):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
         
-    # លុប file ចេញពី server ក្រោយពេល user download រួច
     background_tasks.add_task(remove_file, file_path)
     
     return FileResponse(
