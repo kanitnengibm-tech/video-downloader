@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Video Downloader</title>
+    <title>Universal Video Downloader</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
 
     <div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-700 text-center">
-        <h1 class="text-2xl font-bold mb-2">TikTok Downloader</h1>
-        <p class="text-gray-400 text-sm mb-6">ទាញយកវីដេអូអត់មាន watermark</p>
+        <h1 class="text-2xl font-bold mb-2">All-in-One Downloader</h1>
+        <p class="text-gray-400 text-sm mb-6">TikTok, Facebook, Instagram, YouTube</p>
 
         <div class="space-y-4">
-            <input type="text" id="videoUrl" placeholder="បិទភ្ជាប់ Link TikTok នៅទីនេះ..." 
+            <input type="text" id="videoUrl" placeholder="បិទភ្ជាប់ Link ទីនេះ (Paste Link)..." 
                    class="w-full px-4 py-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:outline-none focus:border-blue-500">
             
             <button onclick="processVideo()" id="btn" 
@@ -23,7 +23,6 @@
         </div>
 
         <div id="result" class="mt-6 hidden text-left bg-gray-700 p-4 rounded-lg">
-            <img id="thumb" class="w-full rounded mb-3 hidden" src="" alt="Thumbnail">
             <p id="title" class="text-sm font-medium mb-3 truncate"></p>
             <a id="downloadLink" href="#" target="_blank" 
                class="block text-center bg-green-600 hover:bg-green-700 py-3 rounded-lg font-semibold transition shadow-lg">
@@ -57,12 +56,7 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    document.getElementById('title').innerText = data.title;
-                    if (data.thumbnail) {
-                        const thumb = document.getElementById('thumb');
-                        thumb.src = data.thumbnail;
-                        thumb.classList.remove('hidden');
-                    }
+                    document.getElementById('title').innerText = "ទាញយកវីដេអូបានជោគជ័យ!";
                     const dlBtn = document.getElementById('downloadLink');
                     dlBtn.href = data.download_url;
                     result.classList.remove('hidden');
@@ -70,7 +64,7 @@
                     alert("បរាជ័យ៖ " + (data.detail || "មិនអាចទាញយក Link នេះបានទេ"));
                 }
             } catch (err) {
-                alert("មានបញ្ហាក្នុងការទាក់ទង Server!");
+                alert("មានបញ្ហាក្នុងการទាក់ទង Server!");
             } finally {
                 btn.innerText = "ទាញយក (Download)";
                 btn.disabled = false;
