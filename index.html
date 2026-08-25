@@ -49,8 +49,8 @@
             btn.disabled = true;
 
             try {
-                // តភ្ជាប់ទៅកាន់ Backend API លើ Port 8000
-                const res = await fetch("/api/extract", ...
+                // ប្រើ Relative URL /api/extract ដើម្បីឱ្យដំណើរការបានទាំងលើទូរស័ព្ទ និង Cloud
+                const res = await fetch("/api/extract", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ url: url })
@@ -68,10 +68,10 @@
                     document.getElementById('downloadLink').href = data.download_url;
                     result.classList.remove('hidden');
                 } else {
-                    alert("បរាជ័យ៖ មិនអាចទាញយក Link នេះបានទេ!");
+                    alert("បរាជ័យ៖ មិនអាចទាញយក Link នេះបានទេ! " + (data.detail || ""));
                 }
             } catch (err) {
-                alert("មានបញ្ហាក្នុងការភ្ជាប់ទៅ Server! សូមពិនិត្យមើលថាតើអ្នកបាន Run Command លើ Terminal ហើយឬនៅ។");
+                alert("មានបញ្ហាក្នុងការទាញយក! សូមព្យាយាមម្តងទៀត។");
             } finally {
                 btn.innerText = "ទាញយក (Download)";
                 btn.disabled = false;
