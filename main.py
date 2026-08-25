@@ -27,37 +27,27 @@ def read_root():
 @app.post("/api/extract")
 def extract_video(data: VideoRequest):
     try:
-        # ប្រើប្រាស់ Cobalt API (Tool ទាញយកវីដេអូឥតគិតថ្លៃ និងលឿនបំផុត)
-        api_url = "https://co.wuk.sh/api/json"
-        payload = {
-            "url": data.url,
-            "vQuality": "max"
-        }
-        headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        }
-        
-        response = requests.post(api_url, json=payload, headers=headers)
+        # ប្រើប្រាស់ TikWM API សម្រាប់ទាញយកវីដេអូ TikTok យ៉ាងរលូន
+        api_url = f"https://www.tikwm.com/api/?url={data.url}"
+        response = requests.get(api_url)
         res_data = response.json()
         
-        if res_data.get("status") == "redirect" or res_data.get("status") == "stream":
-            download_url = res_data.get("url")
+        if res_data.get("code") == 0:
+            video_info = res_data.get("data", {})
+            # เอาลิงก์ดาวน์โหลดแบบ HD หรือแบบธรรมดา
+            download_url = video_info.get("hdplay") or video_info.get("play")
+            title = video_info.get("title", "TikTok Video")
+            
+            if not download_url:
+                raise Exception("រកមិនឃើញ Link សម្រាប់ Download ទេ")
+                
             return {
-                "title": "Downloaded Video",
-                "thumbnail": "",
-                "download_url": download_url
-            }
-        elif res_data.get("status") == "picker":
-            # ករណីมีหลายไฟล์ (เช่น รูปภาพหลายรูป) យកอันដំបូង
-            download_url = res_data.get("picker")[0].get("url")
-            return {
-                "title": "Downloaded Video",
-                "thumbnail": "",
+                "title": title,
+                "thumbnail": video_info.get("cover", ""),
                 "download_url": download_url
             }
         else:
-            raise Exception(res_data.get("text", "មិនអាចទាញយក Link ນີ້បានទេ"))
+            raise Exception("Link នេះមិនត្រឹមត្រូវ ឬមិនអាចទាញយកបានទេ")
             
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
